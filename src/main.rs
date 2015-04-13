@@ -47,11 +47,9 @@ impl Pattern {
                         // Find an unused "self" peg of the same color.
                         let scan = (0..Pattern::size()).find(
                             |spos| s[*spos] == g[gpos] && !s_used.contains(spos));
-                        match scan {
-                            Some(spos) => {
-                                s_used.push(spos);
-                            }
-                            None => ()
+
+                        if let Some(spos) = scan {
+                            s_used.push(spos);
                         }
                     }
                 }
