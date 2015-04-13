@@ -12,31 +12,43 @@ enum CodePeg {
   Green, Blue, White
 }
 
+#[derive(Debug)]
 enum KeyPeg {
   Black, White
 }
 
 
 #[derive(Debug)]
-struct Pattern {
-  pegs: [CodePeg; 4]
+struct Pattern (Vec<CodePeg>);
+
+#[derive(Debug)]
+struct Distance (Vec<Option<KeyPeg>>);
+
+
+impl Pattern {
+    #[inline(always)]
+    fn size() -> usize {
+        4
+    }
+
+    fn new(pegs: Vec<CodePeg>) -> Pattern {
+        assert!(pegs.len() == Pattern::size());
+        Pattern(pegs)
+    }
+
+    //fn score(guess: &Pattern) -> Distance {
+    //    let rightColorAndPlace = 
+    //}
 }
+
 
 impl Rand for Pattern {
     fn rand<R: Rng>(rng: &mut R) -> Self {
-        Pattern {
-            pegs: [CodePeg::rand(rng),
-                   CodePeg::rand(rng),
-                   CodePeg::rand(rng),
-                   CodePeg::rand(rng)]
-        }
+        let mkpeg = |_| CodePeg::rand(rng);
+        Pattern::new((0..4).map(mkpeg).collect())
     }
 }
 
-
-struct Distance {
-  pegs: [Option<KeyPeg>; 4]
-}
 
 fn main() {
     let mut rng = thread_rng();
