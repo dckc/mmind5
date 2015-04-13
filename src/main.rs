@@ -6,7 +6,7 @@ extern crate rand;
 use rand::{Rand, Rng, thread_rng};
 
 #[derive_Rand]
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Debug)]
 enum CodePeg {
   Red, Orange, Yellow,
   Green, Blue, White
@@ -36,16 +36,26 @@ impl Pattern {
         Pattern(pegs)
     }
 
-    //fn score(guess: &Pattern) -> Distance {
-    //    let rightColorAndPlace = 
-    //}
+    fn score(self: &Pattern, guess: &Pattern) -> Distance {
+        match (self, guess) {
+            (&Pattern(ref s), &Pattern(ref g)) => {
+                let rightColorAndPlace = (0..Pattern::size()).map(|pos| {
+                    if g[pos] == s[pos] { Some(KeyPeg::Black) }
+                    else { None }
+                }).collect();
+                
+                // TODO: white pegs
+                Distance(rightColorAndPlace)
+            }
+        }
+    }
 }
 
 
 impl Rand for Pattern {
     fn rand<R: Rng>(rng: &mut R) -> Self {
         let mkpeg = |_| CodePeg::rand(rng);
-        Pattern::new((0..4).map(mkpeg).collect())
+        Pattern::new((0..Pattern::size()).map(mkpeg).collect())
     }
 }
 
@@ -53,5 +63,8 @@ impl Rand for Pattern {
 fn main() {
     let mut rng = thread_rng();
     let secret = Pattern::rand(&mut rng);
+    let guess1 = Pattern::rand(&mut rng);
     println!("codemaker chooses: {:?}", secret);
+    println!("guess 1: {:?}", guess1);
+    println!("feedback: {:?}", secret.score(&guess1));
 }
