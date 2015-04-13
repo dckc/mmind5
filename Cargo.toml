@@ -1,0 +1,20 @@
+[package]
+name = "mmind"
+version = "0.0.1"
+authors = ["Dan Connolly <dckc@madmode.com>"]
+
+keywords = ["algorithms", "games"]
+
+exclude = [
+    ".hg/*",
+    "*.orig",
+    "*~",
+]
+
+description = "Knuth's Algorithm for Mastermind"
+
+license = "MIT"
+
+[dependencies]
+rand_macros = "0.1.5"
+rand = "0.3.7"
