@@ -37,23 +37,22 @@ impl Pattern {
         match (self, guess) {
             (&Pattern(ref s), &Pattern(ref g)) => {
                 let right_place = |pos: &usize| s[*pos] == g[*pos];
-                let mut s_used: Vec<_> = (0..Pattern::size()).filter(right_place).collect();
-                let blacks = s_used.len();
+                let g_used: Vec<_> = (0..Pattern::size()).filter(right_place).collect();
+                let blacks = g_used.len();
 
-                let mut g_used = s_used.clone();
+                let mut s_used = g_used.clone();
 
                 for gpos in 0..Pattern::size() {
-                    // Find an unused "self" peg of the same color.
-                    let scan = (0..Pattern::size()).find(
-                        |spos| s[*spos] == g[gpos]
-                            && !s_used.contains(spos)
-                            && !g_used.contains(&gpos));
-                    match scan {
-                        Some(spos) => {
-                            s_used.push(spos);
-                            g_used.push(gpos);
+                    if !g_used.contains(&gpos) {
+                        // Find an unused "self" peg of the same color.
+                        let scan = (0..Pattern::size()).find(
+                            |spos| s[*spos] == g[gpos] && !s_used.contains(spos));
+                        match scan {
+                            Some(spos) => {
+                                s_used.push(spos);
+                            }
+                            None => ()
                         }
-                        None => ()
                     }
                 }
                 let whites = s_used.len() - blacks;
