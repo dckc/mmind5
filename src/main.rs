@@ -8,21 +8,18 @@ use rand::{Rand, Rng, thread_rng};
 #[derive_Rand]
 #[derive(PartialEq, Eq, Debug)]
 enum CodePeg {
-  Red, Orange, Yellow,
-  Green, Blue, White
+  Red, Orn, Yel,
+  Grn, Blu, Wht
 }
-
-#[derive(Debug)]
-enum KeyPeg {
-  Black, White
-}
-
 
 #[derive(Debug)]
 struct Pattern (Vec<CodePeg>);
 
 #[derive(Debug)]
-struct Distance (Vec<Option<KeyPeg>>);
+struct Distance {
+    blacks: usize,
+    whites: usize
+}
 
 
 impl Pattern {
@@ -39,13 +36,29 @@ impl Pattern {
     fn score(self: &Pattern, guess: &Pattern) -> Distance {
         match (self, guess) {
             (&Pattern(ref s), &Pattern(ref g)) => {
-                let rightColorAndPlace = (0..Pattern::size()).map(|pos| {
-                    if g[pos] == s[pos] { Some(KeyPeg::Black) }
-                    else { None }
-                }).collect();
-                
-                // TODO: white pegs
-                Distance(rightColorAndPlace)
+                let right_place = |pos: &usize| s[*pos] == g[*pos];
+                let mut s_used: Vec<_> = (0..Pattern::size()).filter(right_place).collect();
+                let blacks = s_used.len();
+
+                let mut g_used = s_used.clone();
+
+                for gpos in 0..Pattern::size() {
+                    // Find an unused "self" peg of the same color.
+                    let scan = (0..Pattern::size()).find(
+                        |spos| s[*spos] == g[gpos]
+                            && !s_used.contains(spos)
+                            && !g_used.contains(&gpos));
+                    match scan {
+                        Some(spos) => {
+                            s_used.push(spos);
+                            g_used.push(gpos);
+                        }
+                        None => ()
+                    }
+                }
+                let whites = s_used.len() - blacks;
+
+                Distance { blacks: blacks, whites: whites }
             }
         }
     }
@@ -63,8 +76,10 @@ impl Rand for Pattern {
 fn main() {
     let mut rng = thread_rng();
     let secret = Pattern::rand(&mut rng);
-    let guess1 = Pattern::rand(&mut rng);
-    println!("codemaker chooses: {:?}", secret);
-    println!("guess 1: {:?}", guess1);
-    println!("feedback: {:?}", secret.score(&guess1));
+    println!("codemaker: {:?}", secret);
+    for _ in 0..10 {
+        let guess = Pattern::rand(&mut rng);
+        println!("guess    : {:?}", guess);
+        println!("...........feedback: {:?}", secret.score(&guess));
+    }
 }
