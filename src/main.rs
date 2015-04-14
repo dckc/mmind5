@@ -15,6 +15,7 @@ enum CodePeg {
   Red, Orn, Yel,
   Grn, Blu, Wht
 }
+use CodePeg::*;
 
 struct Pattern (u32);
 
@@ -40,40 +41,47 @@ impl Pattern {
         Pattern::radix().pow(Pattern::size() as u32)
     }
 
-    fn new(lex_ix: u32) -> Pattern {
+    fn ith(lex_ix: u32) -> Pattern {
         assert!(lex_ix <= Pattern::cardinality());
         Pattern(lex_ix)
     }
 
+    fn new(pegs: [CodePeg; 4]) -> Pattern {
+
+        // what happened to ToPrimitive and to_usize?
+        let encode = |pos| match pegs[pos] {
+            Red => 0,
+            Orn => 1,
+            Yel => 2,
+            Grn => 3,
+            Blu => 4,
+            Wht => 5
+        };
+        let radix = Pattern::radix();
+        let ix = encode(0) + radix * (encode(1) + radix * (encode(2) + radix * encode(3)));
+        Pattern(ix)
+    }
+
     fn pegs(&self) -> [CodePeg; 4] {
-        let arb = CodePeg::Red;
+        let arb = Red;
         let mut out = [arb; 4];
         let mut ith = self.0;
-        let mut pos = 0;
 
-        let mut next = || {
-            let it = match ith % Pattern::size() as u32 {
+        for pos in 0..Pattern::size() {
+            let it = match ith % Pattern::radix() as u32 {
                 // what happened to FromPrimitive and from_usize?
-                0 => CodePeg::Red,
-                1 => CodePeg::Orn,
-                2 => CodePeg::Yel,
-                3 => CodePeg::Grn,
-                4 => CodePeg::Blu,
-                5 => CodePeg::Wht,
+                0 => Red,
+                1 => Orn,
+                2 => Yel,
+                3 => Grn,
+                4 => Blu,
+                5 => Wht,
                 _ => panic!("ith % size() > 5")
             };
-            ith = ith / Pattern::size() as u32;
-            it
-        };
+            ith = ith / Pattern::radix() as u32;
+            out[pos] = it;
+        }
 
-        out[pos] = next();
-        pos += 1;
-        out[pos] = next();
-        pos += 1;
-        out[pos] = next();
-        pos += 1;
-        out[pos] = next();
-        
         out
     }
 
@@ -114,8 +122,22 @@ impl Debug for Pattern {
 
 impl Rand for Pattern {
     fn rand<R: Rng>(rng: &mut R) -> Self {
-        let ith = rng.gen::<u32>() % Pattern::cardinality();
-        Pattern::new(ith)
+        let which = rng.gen::<u32>() % Pattern::cardinality();
+        Pattern::ith(which)
+    }
+}
+
+
+#[derive(Debug)]
+struct Solver {
+    guess: Pattern
+}
+
+impl Solver {
+    fn new() -> Solver {
+        // 2. Start with initial guess 1122
+        let initial_guess = [Red, Red, Orn, Orn];
+        Solver { guess: Pattern::new(initial_guess) }
     }
 }
 
@@ -131,4 +153,7 @@ fn main() {
         println!("guess    : {:?}", guess);
         println!("...........feedback: {:?}", secret.score(guess));
     }
+
+    let mut breaker = Solver::new();
+    println!("Five guess codebreaker: {:?}", breaker);
 }
