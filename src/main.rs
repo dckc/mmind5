@@ -1,3 +1,4 @@
+#![feature(collections)]
 #![feature(plugin, custom_derive)]
 #![plugin(rand_macros)]
 #![feature(debug_builders)]
@@ -5,6 +6,7 @@
 extern crate rand;
 
 use std::fmt::{self, Debug, Formatter};
+use std::collections::{BitSet, BitVec};
 use rand::{Rand, Rng};
 
 #[derive_Rand]
@@ -17,9 +19,11 @@ enum CodePeg {
 }
 use CodePeg::*;
 
-struct Pattern (u32);
+#[derive(PartialEq, Eq, Copy, Clone)]
+struct Pattern (usize);
 
 #[derive(Debug)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 struct Distance {
     blacks: usize,
     whites: usize
@@ -33,15 +37,15 @@ impl Pattern {
     }
 
     #[inline(always)]
-    fn radix() -> u32 {
+    fn radix() -> usize {
         6 // CodePeg::Wht.to_usize().unwrap() + 1
     }
 
-    fn cardinality() -> u32 {
-        Pattern::radix().pow(Pattern::size() as u32)
+    fn cardinality() -> usize {
+        Pattern::radix().pow(Pattern::size() as u32) as usize
     }
 
-    fn ith(lex_ix: u32) -> Pattern {
+    fn ith(lex_ix: usize) -> Pattern {
         assert!(lex_ix <= Pattern::cardinality());
         Pattern(lex_ix)
     }
@@ -68,7 +72,7 @@ impl Pattern {
         let mut ith = self.0;
 
         for pos in 0..Pattern::size() {
-            let it = match ith % Pattern::radix() as u32 {
+            let it = match ith % Pattern::radix() {
                 // what happened to FromPrimitive and from_usize?
                 0 => Red,
                 1 => Orn,
@@ -78,7 +82,7 @@ impl Pattern {
                 5 => Wht,
                 _ => panic!("ith % size() > 5")
             };
-            ith = ith / Pattern::radix() as u32;
+            ith = ith / Pattern::radix();
             out[pos] = it;
         }
 
@@ -122,22 +126,51 @@ impl Debug for Pattern {
 
 impl Rand for Pattern {
     fn rand<R: Rng>(rng: &mut R) -> Self {
-        let which = rng.gen::<u32>() % Pattern::cardinality();
-        Pattern::ith(which)
+        let which = rng.gen::<u32>() % Pattern::cardinality() as u32;
+        Pattern::ith(which as usize)
     }
 }
 
 
 #[derive(Debug)]
 struct Solver {
+    s: BitSet,
     guess: Pattern
 }
 
+// http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
 impl Solver {
     fn new() -> Solver {
+        // 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
+        let possible_codes = BitSet::from_bit_vec(
+            BitVec::from_fn(Pattern::cardinality() as usize, |_| true));
         // 2. Start with initial guess 1122
         let initial_guess = [Red, Red, Orn, Orn];
-        Solver { guess: Pattern::new(initial_guess) }
+        Solver { s: possible_codes, guess: Pattern::new(initial_guess) }
+    }
+
+    // Return Some(winning_pattern) or None if we need another turn.
+    fn play(self: &mut Self, peg_score: &Fn(&Pattern) -> Distance) -> Option<Pattern> {
+        // 3. Play the guess to get a response of colored and white pegs.
+        let response = peg_score(&self.guess);
+
+        // If the response is four colored pegs, the game is won, the algorithm terminates.
+        if response.blacks == Pattern::size() {
+            Some(self.guess)
+        } else {
+            // 5. Otherwise, remove from S any code that would not
+            // give the same response if it (the guess) were the code.
+            for code in self.s.clone().iter() {
+                let r = peg_score(&Pattern::ith(code));
+                if r != response {
+                    self.s.remove(&code);
+                }
+            }
+
+            // 6. Apply minimax technique ... TODO
+
+            None
+        }
     }
 }
 
