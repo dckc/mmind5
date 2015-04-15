@@ -5,6 +5,8 @@
 
 extern crate rand;
 
+use std::cmp::Ordering;
+use std::iter::FromIterator;
 use std::fmt::{self, Debug, Formatter};
 use std::collections::{BitSet, BitVec};
 use rand::{Rand, Rng};
@@ -27,6 +29,26 @@ struct Pattern (usize);
 struct Distance {
     blacks: usize,
     whites: usize
+}
+
+impl Ord for Distance {
+    fn cmp(&self, other: &Self) -> Ordering {
+        use std::cmp::Ordering::*;
+
+        let total = |d: &Distance| d.blacks + d.whites;
+        match (total(self).cmp(&total(other)), self.blacks.cmp(&other.blacks)) {
+            (Greater, _) => Greater,
+            (Less, _) => Greater,
+            (_, Greater) => Greater,
+            (_, Less) => Less,
+            _ => Equal
+        }
+    }
+}
+impl PartialOrd for Distance {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 
@@ -160,18 +182,27 @@ impl Solver {
         } else {
             // 5. Otherwise, remove from S any code that would not
             // give the same response if it (the guess) were the code.
-            for code in self.s.clone().iter() {
-                let r = peg_score(&Pattern::ith(code));
-                if r != response {
-                    self.s.remove(&code);
-                }
-            }
+            self.remove_mismatches(peg_score, response);
 
             // 6. Apply minimax technique ... TODO
 
             None
         }
     }
+
+    fn remove_mismatches(self: &mut Self, peg_score: &Fn(&Pattern) -> Distance, response: Distance) {
+        // 5. Otherwise, remove from S any code that would not
+        // give the same response if it (the guess) were the code.
+        let to_keep = {
+            let same_response = || {
+                self.s.iter().filter(|g| peg_score(&Pattern::ith(*g)) == response)
+            };
+            BitSet::from_iter(same_response())
+        };
+
+        self.s.intersect_with(&to_keep);
+    }
+
 }
 
 
@@ -188,5 +219,6 @@ fn main() {
     }
 
     let mut breaker = Solver::new();
+    breaker.play(&|g| secret.score(*g));
     println!("Five guess codebreaker: {:?}", breaker);
 }
