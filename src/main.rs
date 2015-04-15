@@ -5,7 +5,6 @@
 
 extern crate rand;
 
-use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::iter::{FromIterator};
 use std::fmt::{self, Debug, Formatter};
@@ -42,27 +41,6 @@ impl Hash for Distance {
     fn hash<H>(&self, state: &mut H) 
         where H: Hasher {
         (self.blacks, self.whites).hash(state)
-    }
-}
-
-
-impl Ord for Distance {
-    fn cmp(&self, other: &Self) -> Ordering {
-        use std::cmp::Ordering::*;
-
-        let total = |d: &Distance| d.blacks + d.whites;
-        match (total(self).cmp(&total(other)), self.blacks.cmp(&other.blacks)) {
-            (Greater, _) => Greater,
-            (Less, _) => Greater,
-            (_, Greater) => Greater,
-            (_, Less) => Less,
-            _ => Equal
-        }
-    }
-}
-impl PartialOrd for Distance {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
     }
 }
 
@@ -241,17 +219,6 @@ impl<'a> Solver<'a> {
     fn unused_guess_scores(self: &Self)
         -> HashMap<usize, Vec<Pattern>>
     {
-        // TODO: figure out how to move iter_d to Distance::iter
-        let qty = Pattern::size();
-        let iter_d = || {
-            (0..qty+1)
-                .flat_map(|blacks: usize| {
-                    (0..qty+1)
-                        .filter(move |whites| blacks + whites <= qty)
-                        .map(move |whites: usize| Distance { blacks: blacks, whites: whites })
-                })
-        };
-
         // calculate the score of a guess by using "minimum eliminated" =
         // "count of elements in S" - (minus) "highest hit count".
         let guess_score = |gix| {
