@@ -22,6 +22,7 @@ enum CodePeg {
 use CodePeg::*;
 
 #[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialOrd, Ord)]
 struct Pattern (usize);
 
 #[derive(Debug)]
@@ -180,15 +181,8 @@ impl<'a> Solver<'a> {
             // give the same response if it (the guess) were the code.
             self.remove_mismatches(d);
 
-            // TODO:
-    // From the set of guesses with the maximum score, select one as
-    // the next guess, choosing a member of S whenever
-    // possible. (Knuth follows the convention of choosing the guess
-    // with the least numeric value e.g. 2345 is lower than
-    // 3456. Knuth also gives an example showing that in some cases no
-    // member of S will be among the highest scoring guesses and thus
-    // the guess cannot win on the next turn, yet will be necessary to
-    // assure a win in five.)
+            // From the set of guesses with the maximum score, select one as
+            // the next guess ...
             self.choose_guess();
 
             None
@@ -230,7 +224,10 @@ impl<'a> Solver<'a> {
                 *(dist_by_hits.entry(d).or_insert(0)) += 1;
             }
 
-            let highest_hit_count = dist_by_hits.values().max().unwrap();
+            let highest_hit_count = dist_by_hits
+                .values()
+                .max()
+                .expect("no max hit count: empty S? already won?");
             self.s.len() - highest_hit_count
         };
 
@@ -245,7 +242,36 @@ impl<'a> Solver<'a> {
         guesses_with_score
     }
 
+
+    // 6. Apply minimax technique to find a next guess as follows ...
     fn choose_guess(self: &mut Self) {
+        // From the set of guesses with the maximum score, ...
+        let best_guesses = {
+            let guesses_by_score = self.unused_guess_scores();
+            let best_score = guesses_by_score.keys().max()
+                .expect("no guess scores; empty S? already won?");
+            let mut guesses = guesses_by_score[best_score].clone();
+
+            // (Knuth follows the convention of choosing the guess
+            // with the least numeric value)
+            guesses.sort();
+            guesses
+        };
+                
+        // ... select one as
+        // the next guess, choosing a member of S whenever
+        // possible.
+        let best_s = {
+            let in_s = |guess: &Pattern| match *guess {
+                Pattern(ix) => self.s.contains(&ix)
+            };
+            best_guesses.iter().find(|g| in_s(*g))
+        };
+
+        match best_s {
+            Some(g) => self.guessed.push(*g),
+            None => self.guessed.push(best_guesses[0]) // TODO: .expect()
+        }
     }
 }
 
@@ -265,6 +291,9 @@ fn main() {
     let maker = |guess: &Pattern| secret.score(*guess);
 
     let mut breaker = Solver::new(&maker);
-    breaker.play();
-    println!("Five guess codebreaker: {:?}", breaker.guessed);
+    for turn in 0..5 {
+        println!("codebreaker turn {}: {:?} / {}", turn, breaker.guessed, breaker.s.len());
+        let try = breaker.play();
+        println!("codebreaker play: {:?}", try);
+    }
 }
