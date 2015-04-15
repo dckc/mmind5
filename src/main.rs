@@ -6,7 +6,6 @@
 extern crate rand;
 
 use std::hash::{Hash, Hasher};
-use std::iter::{FromIterator};
 use std::fmt::{self, Debug, Formatter};
 use std::collections::{BitSet, BitVec, HashMap};
 use rand::{Rand, Rng};
@@ -179,7 +178,7 @@ impl<'a> Solver<'a> {
         } else {
             // 5. Otherwise, remove from S any code that would not
             // give the same response if it (the guess) were the code.
-            self.remove_mismatches(d);
+            self.remove_mismatches(d, guess);
 
             // From the set of guesses with the maximum score, select one as
             // the next guess ...
@@ -191,15 +190,19 @@ impl<'a> Solver<'a> {
 
     // 5. Otherwise, remove from S any code that would not
     // give the same response if it (the guess) were the code.
-    fn remove_mismatches(self: &mut Self, d: Distance) {
-        let to_keep = {
-            let same_response = || {
-                self.s.iter().filter(|g| (self.codemaker)(&Pattern::ith(*g)) == d)
-            };
-            BitSet::from_iter(same_response())
-        };
+    fn remove_mismatches(self: &mut Self, d: Distance, guess: Pattern) {
+        // println!("remove_mismatches: before: {}", self.s.len());
 
-        self.s.intersect_with(&to_keep);
+        for code in 0..Pattern::cardinality() {
+            if self.s.contains(&code) {
+                let p = Pattern::ith(code);
+                let pd = guess.score(p);
+                if pd != d {
+                    // println!("removing {:?}: {:?} != {:?}", p, pd, d);
+                    self.s.remove(&code);
+                }
+            }
+        }
     }
 
     // For each possible guess, that is, any unused code of the 1296
@@ -213,6 +216,8 @@ impl<'a> Solver<'a> {
     fn unused_guess_scores(self: &Self)
         -> HashMap<usize, Vec<Pattern>>
     {
+        assert!(self.s.len() > 0);
+
         // calculate the score of a guess by using "minimum eliminated" =
         // "count of elements in S" - (minus) "highest hit count".
         let guess_score = |gix| {
@@ -279,21 +284,36 @@ impl<'a> Solver<'a> {
 fn main() {
     use rand::{thread_rng};
 
+/* TODO: turn this into a unit test.
+    use CodePeg::*;
+    let (s, g) = (Pattern::new([Orn, Grn, Grn, Blu]),
+                  Pattern::new([Red, Red, Orn, Orn]));
+    let t1 = s.score(g);
+    println!("t1: {:?} : {:?} => {:?}", s, g, t1);
+*/
+
     let mut rng = thread_rng();
     let secret = Pattern::rand(&mut rng);
     println!("codemaker: {:?}", secret);
+
+/* random guesses to test .score()
     for _ in 0..10 {
         let guess = Pattern::rand(&mut rng);
         println!("guess    : {:?}", guess);
         println!("...........feedback: {:?}", secret.score(guess));
     }
+*/
 
     let maker = |guess: &Pattern| secret.score(*guess);
 
     let mut breaker = Solver::new(&maker);
-    for turn in 0..5 {
-        println!("codebreaker turn {}: {:?} / {}", turn, breaker.guessed, breaker.s.len());
+    for turn in 1..10 {
+        let g = breaker.guessed[breaker.guessed.len() - 1];
+        println!("turn {}:    {:?}  {:?}",
+                 turn, g, secret.score(g));
         let try = breaker.play();
-        println!("codebreaker play: {:?}", try);
+        if try.is_some() {
+            break;
+        }
     }
 }
