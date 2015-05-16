@@ -16,5 +16,5 @@ description = "Knuth's Algorithm for Mastermind"
 license = "MIT"
 
 [dependencies]
-rand_macros = "0.1.5"
+rand_macros = "0.1.7"
 rand = "0.3.7"
