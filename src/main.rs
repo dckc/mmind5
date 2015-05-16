@@ -1,35 +1,29 @@
 #![feature(collections)]
 #![feature(plugin, custom_derive)]
-#![plugin(rand_macros)]
 #![feature(debug_builders)]
 
 extern crate rand;
 
-use rand::{Rand};
+use rand::distributions::{IndependentSample, Range};
 
 mod pattern;
 mod solver;
 
-use pattern::{CodePeg, Pattern, Distance};
-use pattern::CodePeg::*;
-
+use pattern::{Pattern};
 use solver::{Solver};
 
 
+#[cfg_attr(test, allow(dead_code))]
 fn main() {
     use rand::{thread_rng};
 
-    let mut rng = thread_rng();
-    let secret = Pattern::rand(&mut rng);
+    let secret = {
+        let rng = &mut thread_rng();
+        let r = Range::new(0, Pattern::cardinality());
+        let x = r.ind_sample(rng);
+        Pattern::ith(x)
+    };
     println!("codemaker: {:?}", secret);
-
-/* random guesses to test .score()
-    for _ in 0..10 {
-        let guess = Pattern::rand(&mut rng);
-        println!("guess    : {:?}", guess);
-        println!("...........feedback: {:?}", secret.score(guess));
-    }
-*/
 
     let maker = |guess: &Pattern| secret.score(*guess);
 

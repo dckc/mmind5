@@ -1,8 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
-use rand::{Rand, Rng};
 
-//#[derive_Rand]
+
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[derive(Debug)]
 // this used to work, no? #[derive(FromPrimitive)]
@@ -127,14 +126,6 @@ impl Debug for Pattern {
     fn fmt(self: &Pattern, fmt: &mut Formatter) -> fmt::Result {
         let parts = self.pegs();
         parts.iter().fold(fmt.debug_list(), |b, e| b.entry(e)).finish()
-    }
-}
-
-
-impl Rand for Pattern {
-    fn rand<R: Rng>(rng: &mut R) -> Self {
-        let which = rng.gen::<u32>() % Pattern::cardinality() as u32;
-        Pattern::ith(which as usize)
     }
 }
 

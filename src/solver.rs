@@ -1,14 +1,4 @@
-#![feature(collections)]
-#![feature(plugin, custom_derive)]
-#![plugin(rand_macros)]
-#![feature(debug_builders)]
-
-extern crate rand;
-
-use std::hash::{Hash, Hasher};
-use std::fmt::{self, Debug, Formatter};
 use std::collections::{BitSet, BitVec, HashMap};
-use rand::{Rand, Rng};
 
 use pattern::{Pattern, Distance};
 use pattern::CodePeg::*;
