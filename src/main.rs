@@ -19,14 +19,6 @@ use solver::{Solver};
 fn main() {
     use rand::{thread_rng};
 
-/* TODO: turn this into a unit test.
-    use CodePeg::*;
-    let (s, g) = (Pattern::new([Orn, Grn, Grn, Blu]),
-                  Pattern::new([Red, Red, Orn, Orn]));
-    let t1 = s.score(g);
-    println!("t1: {:?} : {:?} => {:?}", s, g, t1);
-*/
-
     let mut rng = thread_rng();
     let secret = Pattern::rand(&mut rng);
     println!("codemaker: {:?}", secret);

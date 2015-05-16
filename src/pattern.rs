@@ -137,3 +137,18 @@ impl Rand for Pattern {
         Pattern::ith(which as usize)
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::{Pattern, Distance};
+    use super::CodePeg::*;
+
+    #[test]
+    fn scoring() {
+        let (s, g) = (Pattern::new([Orn, Grn, Grn, Blu]),
+                      Pattern::new([Red, Red, Orn, Orn]));
+        let t1 = s.score(g);
+        assert_eq!(t1, Distance { blacks: 0, whites: 1 });
+    }
+}
