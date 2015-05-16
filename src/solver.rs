@@ -1,37 +1,55 @@
+//! Mastermind board game solver using [Knuth's five guess algorithm][wp5]
+//!
+//! [wp5]: http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
+
 use std::collections::{BitSet, BitVec, HashMap};
 
 use pattern::{Pattern, Distance};
 use pattern::CodePeg::*;
 
 
-pub struct Solver<'a> {
-    codemaker: &'a Fn(&Pattern) -> Distance,
+/// An Oracle scores a guess Pattern against a secret pattern and
+/// gives Distance feedback.
+pub type Oracle = Box<Fn(&Pattern) -> Distance>;
+
+pub struct Solver {
+    codemaker: Oracle,
     guessed: Vec<Pattern>,
     s: BitSet,
 }
 
-// http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
-impl<'a> Solver<'a> {
-    pub fn new(codemaker: &'a Fn(&Pattern) -> Distance) -> Solver<'a> {
-        // 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
+impl Solver {
+
+    /// - 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
+    /// - 2. Start with initial guess 1122
+    pub fn new(codemaker: Oracle) -> Solver {
         let possible_codes = BitSet::from_bit_vec(
             BitVec::from_fn(Pattern::cardinality() as usize, |_| true));
-        // 2. Start with initial guess 1122
+
         let initial_guess = [Red, Red, Orn, Orn];
+
         Solver { codemaker: codemaker,
                  s: possible_codes,
                  guessed: vec![Pattern::new(initial_guess)] }
     }
 
-    // Return Some(winning_pattern) or None if we need another turn.
+    /// - 3. Play the guess to get a response of colored and white pegs.
+    /// - 4. If the response is four colored pegs, the game is won, the algorithm terminates.
+    /// - 5. Otherwise, remove from S any code that would not
+    ///   give the same response if it (the guess) were the code.
+    ///   From the set of guesses with the maximum score, select one as
+    ///   the next guess ...
+    ///
+    /// Return Some(guess) or None if we already won.
     pub fn play(self: &mut Self) -> Option<Pattern> {
+        let guess = *self.guessed.last().expect("initial guess is gone?!");
+
         // 3. Play the guess to get a response of colored and white pegs.
-        let guess = self.guessed[self.guessed.len() - 1];
         let d = (self.codemaker)(&guess);
 
         // If the response is four colored pegs, the game is won, the algorithm terminates.
         if d.win() {
-            Some(guess)
+            None
         } else {
             // 5. Otherwise, remove from S any code that would not
             // give the same response if it (the guess) were the code.
@@ -39,9 +57,10 @@ impl<'a> Solver<'a> {
 
             // From the set of guesses with the maximum score, select one as
             // the next guess ...
-            self.choose_guess();
+            let ng = self.next_guess();
+            self.guessed.push(ng);
 
-            None
+            Some(guess)
         }
     }
 
@@ -66,15 +85,51 @@ impl<'a> Solver<'a> {
         }
     }
 
-    // For each possible guess, that is, any unused code of the 1296
-    // not just those in S, calculate how many possibilities in S
-    // would be eliminated for each possible colored/white peg score.
-    // The score of a guess is the minimum number of possibilities it
-    // might eliminate from S. A single pass through S for each unused
-    // code of the 1296 will provide a hit count for each
-    // colored/white peg score found; the colored/white peg score with
-    // the highest hit count will eliminate the fewest possibilities;
-    fn unused_guess_scores(self: &Self)
+    /// - 6. Apply minimax technique to find a next guess as follows ...
+    ///      From the set of guesses with the maximum score, 
+    ///      select one as
+    ///      the next guess, choosing a member of S whenever
+    ///      possible.
+    pub fn next_guess(&self) -> Pattern {
+        // From the set of guesses with the maximum score, ...
+        let best_guesses = {
+            let guesses_by_score = self.unused_guess_scores();
+            let best_score = guesses_by_score.keys().max()
+                .expect("no guess scores; empty S? already won?");
+            let mut guesses = guesses_by_score[best_score].clone();
+
+            // (Knuth follows the convention of choosing the guess
+            // with the least numeric value)
+            guesses.sort();
+            guesses
+        };
+                
+        // ... select one as
+        // the next guess, choosing a member of S whenever
+        // possible.
+        let best_s = {
+            let in_s = |guess: &Pattern| match *guess {
+                Pattern(ix) => self.s.contains(&ix)
+            };
+            best_guesses.iter().find(|g| in_s(*g))
+        };
+
+        match best_s {
+            Some(g) => *g,
+            None => best_guesses[0] // TODO: .expect()
+        }
+    }
+
+
+    /// For each possible guess, that is, any unused code of the 1296
+    /// not just those in S, calculate how many possibilities in S
+    /// would be eliminated for each possible colored/white peg score.
+    /// The score of a guess is the minimum number of possibilities it
+    /// might eliminate from S. A single pass through S for each unused
+    /// code of the 1296 will provide a hit count for each
+    /// colored/white peg score found; the colored/white peg score with
+    /// the highest hit count will eliminate the fewest possibilities;
+    pub fn unused_guess_scores(self: &Self)
         -> HashMap<usize, Vec<Pattern>>
     {
         assert!(self.s.len() > 0);
@@ -107,36 +162,13 @@ impl<'a> Solver<'a> {
         }
         guesses_with_score
     }
+}
 
 
-    // 6. Apply minimax technique to find a next guess as follows ...
-    fn choose_guess(self: &mut Self) {
-        // From the set of guesses with the maximum score, ...
-        let best_guesses = {
-            let guesses_by_score = self.unused_guess_scores();
-            let best_score = guesses_by_score.keys().max()
-                .expect("no guess scores; empty S? already won?");
-            let mut guesses = guesses_by_score[best_score].clone();
+impl Iterator for Solver {
+    type Item = Pattern;
 
-            // (Knuth follows the convention of choosing the guess
-            // with the least numeric value)
-            guesses.sort();
-            guesses
-        };
-                
-        // ... select one as
-        // the next guess, choosing a member of S whenever
-        // possible.
-        let best_s = {
-            let in_s = |guess: &Pattern| match *guess {
-                Pattern(ix) => self.s.contains(&ix)
-            };
-            best_guesses.iter().find(|g| in_s(*g))
-        };
-
-        match best_s {
-            Some(g) => self.guessed.push(*g),
-            None => self.guessed.push(best_guesses[0]) // TODO: .expect()
-        }
+    fn next(&mut self) -> Option<Pattern> {
+        self.play()
     }
 }

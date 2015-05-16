@@ -6,15 +6,18 @@ extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
 
-mod pattern;
-mod solver;
+pub mod pattern;
+pub mod solver;
 
 use pattern::{Pattern};
 use solver::{Solver};
 
 
-#[cfg_attr(test, allow(dead_code))]
-fn main() {
+/// One player becomes the *codemaker*, the other the
+/// *codebreaker*. Guesses and feedback continue to alternate until
+/// either the codebreaker guesses correctly, or ten incorrect guesses
+/// are made.
+pub fn main() {
     use rand::{thread_rng};
 
     let secret = {
@@ -25,16 +28,13 @@ fn main() {
     };
     println!("codemaker: {:?}", secret);
 
-    let maker = |guess: &Pattern| secret.score(*guess);
+    let maker = Box::new(move |guess: &Pattern| secret.score(*guess));
 
-    let mut breaker = Solver::new(&maker);
-    for turn in 1..10 {
-        let g = breaker.last_guess();
+    let breaker = Solver::new(maker);
+
+    // TODO: support twelve (or ten, or eight) CLI arg
+    for (turn, g) in breaker.take(10).enumerate() {
         println!("turn {}:    {:?}  {:?}",
                  turn, g, secret.score(g));
-        let try = breaker.play();
-        if try.is_some() {
-            break;
-        }
     }
 }

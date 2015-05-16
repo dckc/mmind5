@@ -1,7 +1,10 @@
+//! The game is played using *code pegs* of six different colors.
+//! The codemaker chooses a pattern of four code pegs.
 use std::hash::{Hash, Hasher};
 use std::fmt::{self, Debug, Formatter};
 
 
+/// The game is played using *code pegs* of six different colors.
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[derive(Debug)]
 // this used to work, no? #[derive(FromPrimitive)]
@@ -11,10 +14,19 @@ pub enum CodePeg {
 }
 use self::CodePeg::*;
 
+
+/// The codemaker chooses a pattern of four code pegs. Duplicates are
+/// allowed, so the player could even choose four code pegs of the same
+/// color.
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[derive(PartialOrd, Ord)]
 pub struct Pattern (pub usize);
 
+
+/// A colored or black key peg is placed for each code peg from
+/// the guess which is correct in both color and position. A white key
+/// peg indicates the existence of a correct color code peg placed in
+/// the wrong position.
 #[derive(Debug)]
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub struct Distance {
@@ -23,6 +35,7 @@ pub struct Distance {
 }
 
 impl Distance {
+    /// If the response is four colored pegs, the game is won.
     pub fn win(self) -> bool {
         self.blacks == Pattern::size()
     }
@@ -38,24 +51,29 @@ impl Hash for Distance {
 
 impl Pattern {
     #[inline(always)]
+    /// The codemaker chooses a pattern of four code pegs.
     pub fn size() -> usize {
         4
     }
 
     #[inline(always)]
+    /// The game is played using code pegs of six different colors.
     pub fn radix() -> usize {
         6 // CodePeg::Wht.to_usize().unwrap() + 1
     }
 
+    /// Size of the set 1296 possible codes, 1111,1112,.., 6666
     pub fn cardinality() -> usize {
         Pattern::radix().pow(Pattern::size() as u32) as usize
     }
 
+    /// Construct a pattern from a lexical index.
     pub fn ith(lex_ix: usize) -> Pattern {
         assert!(lex_ix <= Pattern::cardinality());
         Pattern(lex_ix)
     }
 
+    /// Construct a Pattern from CodePegs.
     pub fn new(pegs: [CodePeg; 4]) -> Pattern {
 
         // what happened to ToPrimitive and to_usize?
@@ -72,7 +90,8 @@ impl Pattern {
         Pattern(ix)
     }
 
-    fn pegs(&self) -> [CodePeg; 4] {
+    /// Decode a Pattern into CodePegs.
+    pub fn pegs(&self) -> [CodePeg; 4] {
         let arb = Red;
         let mut out = [arb; 4];
         let mut ith = self.0;
@@ -95,6 +114,12 @@ impl Pattern {
         out
     }
 
+    /// The codemaker provides feedback by placing
+    /// from zero to four key pegs in the small holes of the row with the
+    /// guess. A colored or black key peg is placed for each code peg from
+    /// the guess which is correct in both color and position. A white key
+    /// peg indicates the existence of a correct color code peg placed in
+    /// the wrong position.
     pub fn score(self: &Pattern, guess: Pattern) -> Distance {
         let s = self.pegs();
         let g = guess.pegs();
