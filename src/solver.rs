@@ -185,12 +185,12 @@ impl PatternSet {
     }
 
     pub fn contains(&self, p: &Pattern) -> bool {
-        let ix = (*p).0 as usize;
+        let ix = p.index() as usize;
         self.indexes.contains(&ix)
     }
 
     pub fn remove(&mut self, p: &Pattern) -> bool {
-        let ix = (*p).0 as usize;
+        let ix = p.index() as usize;
         self.indexes.remove(&ix)
     }
 

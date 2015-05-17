@@ -11,7 +11,7 @@ use std::ops::Range;
 /// color.
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[derive(PartialOrd, Ord)]
-pub struct Pattern (pub u32);
+pub struct Pattern (u32);
 
 
 /// A colored or black key peg is placed for each code peg from
@@ -72,6 +72,10 @@ impl Pattern {
     pub fn ith(lex_ix: u32) -> Pattern {
         assert!(lex_ix <= Pattern::cardinality());
         Pattern(lex_ix)
+    }
+
+    pub fn index(&self) -> u32 {
+        return self.0
     }
 
     pub fn range() -> iter::Map<Range<u32>, fn(u32) -> Pattern > {
