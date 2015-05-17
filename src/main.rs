@@ -4,10 +4,10 @@ extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
 
-pub mod pattern;
+pub mod gameplay;
 pub mod solver;
 
-use pattern::{Pattern};
+use gameplay::{Pattern};
 use solver::{Solver};
 
 

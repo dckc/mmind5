@@ -4,7 +4,7 @@
 
 use std::collections::{BitSet, BitVec, HashMap};
 
-use pattern::{Pattern, Distance};
+use gameplay::{Pattern, Distance};
 
 
 /// An Oracle scores a guess Pattern against a secret pattern and
