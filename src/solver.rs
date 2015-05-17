@@ -4,12 +4,12 @@
 
 use std::collections::{BitSet, BitVec, HashMap};
 
-use gameplay::{Pattern, Distance};
+use gameplay::{Pattern, KeyPegs};
 
 
 /// An Oracle scores a guess Pattern against a secret pattern and
 /// gives Distance feedback.
-pub type Oracle = Box<Fn(&Pattern) -> Distance>;
+pub type Oracle = Box<Fn(&Pattern) -> KeyPegs>;
 
 pub struct Solver {
     codemaker: Oracle,
@@ -71,7 +71,7 @@ impl Solver {
 
     // 5. Otherwise, remove from S any code that would not
     // give the same response if it (the guess) were the code.
-    fn remove_mismatches(self: &mut Self, d: Distance, guess: Pattern) {
+    fn remove_mismatches(self: &mut Self, d: KeyPegs, guess: Pattern) {
         // println!("remove_mismatches: before: {}", self.s.len());
 
         for p in Pattern::range() {

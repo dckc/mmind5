@@ -1,10 +1,53 @@
-//! The game is played using *code pegs* of six different colors.
-//! The codemaker chooses a pattern of four code pegs.
+//! Mastermind is a code-breaking game for two players.
+//!
+//!The game is played using:
+//!
+//!  - a *decoding board*, with a shield at one end covering a row of
+//!    four large holes, and twelve (or ten, or eight, or six)
+//!    additional rows containing four large holes next to a set of
+//!    four small holes;
+//!  - *code pegs* of six (or more; see Variations below) different
+//!    colors, with round heads, which will be placed in the large holes
+//!    on the board; and
+//!  - *key pegs*, some colored black, some white, which are flat-headed
+//!    and smaller than the code pegs; they will be placed in the small
+//!    holes on the board.
+//!
+//! ```rust
+//! use self::mastermind::gameplay::{DecodingBoard, CodePeg, KeyPegs};
+//!
+//! assert_eq!(DecodingBoard::default().rows, 12);
+//! assert_eq!(CodePeg::colors(), 6);
+//!
+//! let b1w2 = KeyPegs::new().blacks(1).whites(2));
+//! assert_eq!(format!("{}", b1w2, "BWW");
+//! ```
+
 use std::hash::{Hash, Hasher};
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter;
 use std::ops::Range;
+
+pub struct DecodingBoard {
+    pub rows: u8
+}
+
+impl Default for DecodingBoard {
+    fn default() -> Self {
+        DecodingBoard { rows: 12 }
+    }
+}
+
+pub enum CodePeg {}
+impl CodePeg {
+    #[inline(always)]
+    /// The game is played using code pegs of six different colors.
+    pub fn colors() -> u8 {
+        6
+    }
+}
+
 
 /// The codemaker chooses a pattern of four code pegs. Duplicates are
 /// allowed, so the player could even choose four code pegs of the same
@@ -20,19 +63,33 @@ pub struct Pattern (u32);
 /// the wrong position.
 #[derive(Debug)]
 #[derive(PartialEq, Eq, Copy, Clone)]
-pub struct Distance {
+pub struct KeyPegs {
     blacks: u8,
     whites: u8
 }
 
-impl Distance {
+impl KeyPegs {
     /// If the response is four colored pegs, the game is won.
-    pub fn win(self) -> bool {
+    pub fn win(&self) -> bool {
         self.blacks as usize == Pattern::size()
+    }
+
+    pub fn new() -> KeyPegs {
+        KeyPegs { blacks: 0, whites: 0 }
+    }
+
+    pub fn blacks(self, blacks: u8) -> KeyPegs {
+        assert!(blacks as usize + self.whites as usize <= Pattern::size());
+        KeyPegs { blacks: blacks, .. self }
+    }
+
+    pub fn whites(self, whites: u8) -> KeyPegs {
+        assert!(self.blacks as usize + whites as usize <= Pattern::size());
+        KeyPegs { whites: whites, .. self }
     }
 }
 
-impl Display for Distance {
+impl Display for KeyPegs {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
         let s = iter::repeat('B').take(self.blacks as usize)
             .chain(iter::repeat('W').take(self.whites as usize))
@@ -42,7 +99,7 @@ impl Display for Distance {
 }
 
 
-impl Hash for Distance {
+impl Hash for KeyPegs {
     fn hash<H>(&self, state: &mut H) 
         where H: Hasher {
         (self.blacks, self.whites).hash(state)
@@ -57,15 +114,9 @@ impl Pattern {
         4
     }
 
-    #[inline(always)]
-    /// The game is played using code pegs of six different colors.
-    pub fn radix() -> u8 {
-        6
-    }
-
     /// Size of the set 1296 possible codes, 1111,1112,.., 6666
     pub fn cardinality() -> u32 {
-        (Pattern::radix() as u32).pow(Pattern::size() as u32)
+        (CodePeg::colors() as u32).pow(Pattern::size() as u32)
     }
 
     /// Construct a pattern from a lexical index.
@@ -85,7 +136,7 @@ impl Pattern {
     /// Construct a Pattern from digits 1-6.
     /// Characters other than 1-6 are treated as '1'.
     pub fn from_digits(digits: [char; 4]) -> Pattern {
-        let base = Pattern::radix() as u32;
+        let base = CodePeg::colors() as u32;
         let digit = |pos: usize| digits[pos].to_digit(base).unwrap_or(1) - 1;
         let ix = digit(0) + base * (digit(1) + base * (digit(2) + base * digit(3)));
         Pattern(ix)
@@ -98,9 +149,9 @@ impl Pattern {
         let mut ith = self.0;
 
         for pos in 0..Pattern::size() {
-            let remainder = (ith % Pattern::radix() as u32) as u8;
+            let remainder = (ith % CodePeg::colors() as u32) as u8;
             let digit = (('1' as u8) + remainder) as char;
-            ith = ith / Pattern::radix() as u32;
+            ith = ith / CodePeg::colors() as u32;
             out[pos as usize] = digit;
         }
 
@@ -113,13 +164,13 @@ impl Pattern {
     /// the guess which is correct in both color and position. A white key
     /// peg indicates the existence of a correct color code peg placed in
     /// the wrong position.
-    pub fn score(self: &Pattern, guess: Pattern) -> Distance {
+    pub fn score(self: &Pattern, guess: Pattern) -> KeyPegs {
         let s = self.to_digits();
         let g = guess.to_digits();
 
         let right_place = |pos: &usize| s[*pos] == g[*pos];
         let g_used: Vec<_> = (0..Pattern::size()).filter(right_place).collect();
-        let blacks = g_used.len() as u8;
+        let blacks = g_used.len();
         
         let mut s_used = g_used.clone();
         
@@ -134,9 +185,9 @@ impl Pattern {
                 }
             }
                 }
-        let whites = s_used.len() as u8 - blacks;
-        
-        Distance { blacks: blacks, whites: whites }
+        let whites = s_used.len() - blacks;
+
+        KeyPegs::new().blacks(blacks as u8).whites(whites as u8)
     }
 }
 
@@ -159,14 +210,14 @@ impl Display for Pattern {
 
 #[cfg(test)]
 mod tests {
-    use super::{Pattern, Distance};
+    use super::{Pattern, KeyPegs};
 
     #[test]
     fn scoring() {
         let (s, g) = (Pattern::from_digits(['1', '2', '3', '4']),
                       Pattern::from_digits(['2', '5', '5', '5']));
         let t1 = s.score(g);
-        assert_eq!(t1, Distance { blacks: 0, whites: 1 });
+        assert_eq!(t1, KeyPegs::new().blacks(0).whites(1));
     }
 
     #[test]
@@ -174,6 +225,6 @@ mod tests {
         let (s, g) = (Pattern::from_digits(['1', '2', '3', '4']),
                       Pattern::from_digits(['1', '2', '3', '4']));
         let t1 = s.score(g);
-        assert_eq!(t1, Distance { blacks: 4, whites: 0 });
+        assert_eq!(t1, KeyPegs::new().blacks(4).whites(0));
     }
 }

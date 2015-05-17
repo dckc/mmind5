@@ -7,7 +7,7 @@ use rand::distributions::{IndependentSample, Range};
 pub mod gameplay;
 pub mod solver;
 
-use gameplay::{Pattern};
+use gameplay::{DecodingBoard, Pattern};
 use solver::{Solver};
 
 
@@ -31,7 +31,9 @@ pub fn main() {
     let breaker = Solver::new(maker);
 
     // TODO: support twelve (or ten, or eight) CLI arg
-    for (turn, g) in breaker.take(10).enumerate() {
+    let rows = DecodingBoard::default().rows as usize;
+
+    for (turn, g) in breaker.take(rows).enumerate() {
         println!("turn {}:    {}  {}",
                  turn + 1, g, secret.score(g));
     }
