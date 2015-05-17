@@ -55,8 +55,10 @@
 //! ```rust
 //! use self::mastermind::gameplay::{Pattern, KeyPegs};
 //!
-//! let code = Pattern::from_digits(['1', '1', '2', '2']);
-//! let codemaker = Box::new(move |guess: &Pattern| code.score(*guess));
+//! let codemaker = {
+//!   let code = Pattern::from_digits(['1', '1', '2', '2']);
+//!   Box::new(move |guess: &Pattern| code.score(*guess))
+//! };
 //!
 //! let guess = Pattern::from_digits(['1', '1', '1', '2']);
 //! let feedback = codemaker(&guess);
@@ -181,7 +183,7 @@ impl Pattern {
     pub fn from_digits(digits: [char; 4]) -> Pattern {
         let base = CodePeg::colors() as u32;
         let digit = |pos: usize| digits[pos].to_digit(base).unwrap_or(1) - 1;
-        let ix = digit(0) + base * (digit(1) + base * (digit(2) + base * digit(3)));
+        let ix = digit(3) + base * (digit(2) + base * (digit(1) + base * digit(0)));
         Pattern(ix)
     }
 
@@ -191,11 +193,12 @@ impl Pattern {
         let mut out = [arb; 4];
         let mut ith = self.0;
 
-        for pos in 0..Pattern::size() {
+        for exp in 0..Pattern::size() {
             let remainder = (ith % CodePeg::colors() as u32) as u8;
             let digit = (('1' as u8) + remainder) as char;
             ith = ith / CodePeg::colors() as u32;
-            out[pos as usize] = digit;
+            let pos = (Pattern::size() - 1 - exp) as usize;
+            out[pos] = digit;
         }
 
         out
@@ -236,6 +239,7 @@ impl Pattern {
 
 
 impl Debug for Pattern {
+    // TODO: refactor w.r.t. Display
     fn fmt(self: &Pattern, fmt: &mut Formatter) -> fmt::Result {
         let digits = self.to_digits();
         fmt.write_fmt(format_args!("{}{}{}{}", digits[0], digits[1], digits[2], digits[3]))
