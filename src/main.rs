@@ -1,6 +1,4 @@
 #![feature(collections)]
-#![feature(plugin, custom_derive)]
-#![feature(debug_builders)]
 
 extern crate rand;
 
@@ -26,7 +24,7 @@ pub fn main() {
         let x = r.ind_sample(rng);
         Pattern::ith(x)
     };
-    println!("codemaker: {:?}", secret);
+    println!("codemaker: {}", secret);
 
     let maker = Box::new(move |guess: &Pattern| secret.score(*guess));
 
@@ -34,7 +32,7 @@ pub fn main() {
 
     // TODO: support twelve (or ten, or eight) CLI arg
     for (turn, g) in breaker.take(10).enumerate() {
-        println!("turn {}:    {:?}  {:?}",
-                 turn, g, secret.score(g));
+        println!("turn {}:    {}  {}",
+                 turn + 1, g, secret.score(g));
     }
 }
