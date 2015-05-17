@@ -4,15 +4,11 @@
 
 use std::collections::{BitSet, BitVec, HashMap};
 
-use gameplay::{Pattern, KeyPegs};
+use gameplay::{Pattern, KeyPegs, Shield};
 
-
-/// An Oracle scores a guess Pattern against a secret pattern and
-/// gives Distance feedback.
-pub type Oracle = Box<Fn(&Pattern) -> KeyPegs>;
 
 pub struct Solver {
-    codemaker: Oracle,
+    codemaker: Shield,
     guessed: Vec<Pattern>,
     s: PatternSet,
 }
@@ -20,7 +16,7 @@ pub struct Solver {
 impl Solver {
 
     /// - 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
-    pub fn new(codemaker: Oracle) -> Solver {
+    pub fn new(codemaker: Shield) -> Solver {
         let possible_codes = PatternSet::all();
 
         Solver { codemaker: codemaker,
