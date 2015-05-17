@@ -1,6 +1,7 @@
 [package]
 name = "mmind"
-version = "0.0.1"
+description = "Knuth's Algorithm for Mastermind"
+version = "0.0.2"
 authors = ["Dan Connolly <dckc@madmode.com>"]
 
 keywords = ["algorithms", "games"]
@@ -11,9 +12,15 @@ exclude = [
     "*~",
 ]
 
-description = "Knuth's Algorithm for Mastermind"
-
 license = "MIT"
 
 [dependencies]
 rand = "0.3.7"
+
+[lib]
+name = "mastermind"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mmind"
+path = "src/main.rs"
