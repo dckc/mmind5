@@ -42,20 +42,29 @@
 //! existence of a correct color code peg placed in the wrong
 //! position.
 //!
+//! If there are duplicate colours in the guess, they cannot all be
+//! awarded a key peg unless they correspond to the same number of
+//! duplicate colours in the hidden code. For example, if the hidden
+//! code is white-white-black-black and the player guesses
+//! white-white-white-black, the codemaker will award two colored key
+//! pegs for the two correct whites, nothing for the third white as
+//! there is not a third white in the code, and a colored key peg for
+//! the black. No indication is given of the fact that the code also
+//! includes a second black.
+//!
 //! ```rust
 //! use self::mastermind::gameplay::{Pattern, KeyPegs};
 //!
-//! let code = Pattern::from_digits(['4', '3', '3', '2']);
+//! let code = Pattern::from_digits(['1', '1', '2', '2']);
 //! let codemaker = Box::new(move |guess: &Pattern| code.score(*guess));
 //!
-//! let guess = Pattern::from_digits(['1', '2', '3', '4']);
+//! let guess = Pattern::from_digits(['1', '1', '1', '2']);
 //! let feedback = codemaker(&guess);
 //!
-//! assert_eq!(feedback, KeyPegs::new().whites(2).blacks(1));
+//! assert_eq!(feedback, KeyPegs::new().blacks(2 + 1));
 //! ```
 
-// TODO: test for "The two players decide in advance how many games
-// they will play, which must be an even number."
+// TODO: points, multiple games
 
 use std::hash::{Hash, Hasher};
 use std::fmt;
