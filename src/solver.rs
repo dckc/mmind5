@@ -92,24 +92,12 @@ impl Solver {
     ///      possible.
     pub fn next_guess(&self) -> Pattern {
         // From the set of guesses with the maximum score, ...
-        let best_guesses: Vec<Pattern> = {
-            let guesses_by_score = self.unused_guess_scores();
-            let best_score = guesses_by_score.keys().max()
-                .expect("no guess scores; empty S? already won?");
-            let mut guesses = guesses_by_score[best_score].clone();
-
-            // (Knuth follows the convention of choosing the guess
-            // with the least numeric value)
-            guesses.sort();
-            guesses
-        };
+        let best_guesses = self.best_guesses();
                 
         // ... select one as
         // the next guess, choosing a member of S whenever
         // possible.
-        let best_s = {
-            best_guesses.iter().find(|g| self.s.contains(g))
-        };
+        let best_s = best_guesses.iter().find(|g| self.s.contains(g));
 
         match best_s {
             Some(g) => *g,
@@ -126,8 +114,7 @@ impl Solver {
     /// code of the 1296 will provide a hit count for each
     /// colored/white peg score found; the colored/white peg score with
     /// the highest hit count will eliminate the fewest possibilities;
-    pub fn unused_guess_scores(self: &Self)
-        -> HashMap<usize, Vec<Pattern>>
+    pub fn best_guesses(self: &Self) -> Vec<Pattern>
     {
         assert!(self.s.len() > 0);
 
@@ -147,14 +134,34 @@ impl Solver {
             self.s.len() - highest_hit_count
         };
 
-        let mut guesses_with_score = HashMap::new();
-        for guess in Pattern::range() {
-            if !self.guessed.contains(&guess) {
-                let score = guess_score(guess);
-                guesses_with_score.entry(score).or_insert(vec![]).push(guess)
+        let append = |xs: Vec<Pattern>, x| {
+            let mut v = xs;
+            v.push(x);
+            v
+        };
+
+        let highest = |acc: (usize, Vec<Pattern>), p| {
+            let (high_score, candidates) = acc;
+            let score = guess_score(p);
+            if score > high_score {
+                (score, vec![p])
+            } else if score == high_score {
+                (score, append(candidates, p))
+            } else {
+                (high_score, candidates)
             }
-        }
-        guesses_with_score
+        };
+
+        let sorted = |ps: Vec<Pattern>| {
+            let mut work = ps;
+            work.sort();
+            work
+        };
+
+        let (_, high_scoring_guesses) = Pattern::range().fold((0, vec![]), highest);
+        // (Knuth follows the convention of choosing the guess
+        // with the least numeric value)
+        sorted(high_scoring_guesses)
     }
 }
 
@@ -192,13 +199,5 @@ impl PatternSet {
     pub fn remove(&mut self, p: &Pattern) -> bool {
         let ix = p.index() as usize;
         self.indexes.remove(&ix)
-    }
-
-    pub fn each(&self, f: &Fn(Pattern) -> ()) {
-        for p in Pattern::range() {
-            if self.contains(&p) {
-                f(p)
-            }
-        }
     }
 }
