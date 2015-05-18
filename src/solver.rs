@@ -89,12 +89,13 @@
 //! assert!( breaker2.s.contains(&keep));
 //! ```
 //!
-//! TODO: test for steps 5, 6, 7
+//! TODO: test for step 6
 //!
 //! [Knuth's five guess algorithm][wp5]
 //! [wp5]: http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
 
 use std::collections::{BitSet, BitVec, HashMap};
+use std::cmp::Ordering::*;
 
 use gameplay::{Pattern, KeyPegs, Shield};
 
@@ -177,45 +178,51 @@ impl Solver {
     ///      the next guess, choosing a member of S whenever
     ///      possible.
     pub fn next_guess(&self) -> Pattern {
-        // From the set of guesses with the maximum score, ...
-        let best_guesses = self.best_guesses();
+        // Knuth follows the convention of choosing the guess with the
+        // least numeric value e.g. 2345 is lower than 3456.
+        let sorted = |ps: Vec<Pattern>| {
+            let mut work = ps;
+            work.sort();
+            work
+        };
+        let next_guesses = sorted(self.max_score_guesses());
                 
-        // ... select one as
-        // the next guess, choosing a member of S whenever
-        // possible.
-        let best_s = best_guesses.iter().find(|g| self.s.contains(g));
+        // ... choosing a member of S whenever possible.
+        let next_in_s = next_guesses.iter().find(|g| self.s.contains(g));
 
-        match best_s {
+        match next_in_s {
             Some(g) => *g,
-            None => best_guesses[0] // TODO: .expect()
+            None => next_guesses[0] // TODO: .expect()
         }
     }
 
 
-    /// For each possible guess, that is, any unused code of the 1296
-    /// not just those in S, calculate how many possibilities in S
-    /// would be eliminated for each possible colored/white peg score.
-    /// The score of a guess is the minimum number of possibilities it
-    /// might eliminate from S. A single pass through S for each unused
-    /// code of the 1296 will provide a hit count for each
-    /// colored/white peg score found; the colored/white peg score with
-    /// the highest hit count will eliminate the fewest possibilities;
-    pub fn best_guesses(self: &Self) -> Vec<Pattern>
+    /// Apply minimax technique to find a next guess as follows ...
+    pub fn max_score_guesses(self: &Self) -> Vec<Pattern>
     {
-        assert!(self.s.len() > 0);
 
-        // calculate the score of a guess by using "minimum eliminated" =
-        // "count of elements in S" - (minus) "highest hit count".
-        let guess_score = |g: Pattern| {
-            let mut dist_by_hits = HashMap::new();
-            for other in Pattern::range().filter(|p| self.s.contains(p)) {
-                let d = g.score(other);
-                *(dist_by_hits.entry(d).or_insert(0)) += 1;
-            }
+        // The score of a guess is the minimum number of possibilities
+        // it might eliminate from S.
+        let minimum_eliminated = |guess: Pattern| {
+            // A single pass through S for each unused code of the 1296 will provide a hit
+            // count for each colored/white peg score found;
+            let s_pass = Pattern::range().filter(|p| self.s.contains(p));
 
-            let highest_hit_count = dist_by_hits
-                .values()
-                .max()
+            let peg_scores = s_pass.map(|possibility| guess.score(possibility));
+            let hit_count = {
+                let mut map = HashMap::new();
+
+                for bw in peg_scores {
+                    *(map.entry(bw).or_insert(0)) += 1;
+                }
+                map
+            };
+
+            // the colored/white peg score with the highest hit count
+            // will eliminate the fewest possibilities; calculate the
+            // score of a guess by using "minimum eliminated" = "count
+            // of elements in S" - (minus) "highest hit count".
+            let highest_hit_count = hit_count.values().max()
                 .expect("no max hit count: empty S? already won?");
             self.s.len() - highest_hit_count
         };
@@ -226,32 +233,24 @@ impl Solver {
             v
         };
 
-        let highest = |acc: (usize, Vec<Pattern>), p| {
-            let (high_score, candidates) = acc;
-            let score = guess_score(p);
-            if score > high_score {
-                (score, vec![p])
-            } else if score == high_score {
-                (score, append(candidates, p))
-            } else {
-                (high_score, candidates)
-            }
-        };
-
-        let sorted = |ps: Vec<Pattern>| {
-            let mut work = ps;
-            work.sort();
-            work
-        };
-
+        // For each possible guess, that is, any unused code of the
+        // 1296 not just those in S, calculate how many possibilities
+        // in S would be eliminated for each possible colored/white
+        // peg score.
         let unused = |p: &Pattern| !self.guessed.contains(p);
-        let (_, high_scoring_guesses) = Pattern::range()
+        let (_, max_scoring_guesses) = Pattern::range()
             .filter(unused)
-            .fold((0, vec![]), highest);
+            .fold((0, vec![]), |acc: (usize, Vec<Pattern>), guess| {
+                let (high_score, candidates) = acc;
+                let score = minimum_eliminated(guess);
+                match score.cmp(&high_score) {
+                    Greater => (score, vec![guess]),
+                    Equal => (score, append(candidates, guess)),
+                    _ => (high_score, candidates)
+                }
+            });
 
-        // (Knuth follows the convention of choosing the guess
-        // with the least numeric value)
-        sorted(high_scoring_guesses)
+        max_scoring_guesses
     }
 }
 
@@ -293,10 +292,5 @@ impl PatternSet {
                 self.indexes.remove(&ix);
             }
         }
-    }
-
-    pub fn remove(&mut self, p: &Pattern) -> bool {
-        let ix = p.index() as usize;
-        self.indexes.remove(&ix)
     }
 }
