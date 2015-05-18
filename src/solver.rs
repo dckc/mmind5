@@ -43,13 +43,11 @@
 //! 7. Repeat from step 3.
 //!
 //! ```rust
-//! use self::mastermind::gameplay::Pattern;
+//! use self::mastermind::gameplay::{Pattern, KeyPegs};
 //! use self::mastermind::solver::Solver;
 //!
-//! let codemaker = {
-//!   let code = Pattern::from_digits(['1', '1', '2', '2']);
-//!   Box::new(move |guess: &Pattern| code.score(*guess))
-//! };
+//! let code1 = Pattern::from_digits(['1', '1', '2', '2']);
+//! let codemaker_easy = Box::new(move |guess: &Pattern| code1.score(*guess));
 //!
 //! let s = Solver::possible_codes();
 //! assert_eq!(s.len(), 1296);
@@ -61,9 +59,34 @@
 //!
 //! assert_eq!(format!("{}", Solver::initial_guess()), "1122");
 //!
-//! let the_guess = Solver::initial_guess();
-//! let response = codemaker(&the_guess);
-//! assert_eq!(response.win(), true);
+//! let mut breaker1 = Solver::new(codemaker_easy);
+//! match breaker1.play() {
+//!   None => panic!("0 guesses from breaker1?!"),
+//!   Some(g) => {
+//!     let response = code1.score(g);
+//!     assert!(response.win())
+//!   }
+//! }
+//! assert_eq!(breaker1.play(), None);
+//! ```
+//!
+//! ```rust
+//! use self::mastermind::gameplay::{Pattern, KeyPegs};
+//! use self::mastermind::solver::Solver;
+//! let code2 = Pattern::from_digits(['1', '1', '2', '3']);
+//! let codemaker_harder = Box::new(move |guess: &Pattern| code2.score(*guess));
+//!
+//! let mut breaker2 = Solver::new(codemaker_harder);
+//! let guess1 = breaker2.play().expect("0 guesses!?");
+//! let response = code2.score(guess1);
+//! assert_eq!(response.win(), false);
+//! assert_eq!(response, KeyPegs::new().blacks(3));
+//!
+//! breaker2.retain_same_response(response);
+//! assert!(!breaker2.s.contains(&Pattern::from_digits(['5', '2', '2', '3'])));
+//! let keep = Pattern::from_digits(['5', '1', '2', '2']);
+//! assert_eq!(guess1.score(keep), response);
+//! assert!( breaker2.s.contains(&keep));
 //! ```
 //!
 //! TODO: test for steps 5, 6, 7
@@ -78,18 +101,17 @@ use gameplay::{Pattern, KeyPegs, Shield};
 
 pub struct Solver {
     codemaker: Shield,
-    guessed: Vec<Pattern>,
-    s: PatternSet,
+    pub guessed: Vec<Pattern>,
+    pub s: PatternSet,
 }
 
 impl Solver {
+    /// - 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
     pub fn possible_codes() -> PatternSet {
         PatternSet::all()
     }
 
-    /// - 1. Create the set S of 1296 possible codes, 1111,1112,.., 6666.
     pub fn new(codemaker: Shield) -> Solver {
-
         Solver { codemaker: codemaker,
                  s: Solver::possible_codes(),
                  guessed: vec![] }
@@ -115,17 +137,17 @@ impl Solver {
             self.guessed.push(guess);
             Some(guess)
         } else {
-            let prev = *self.guessed.last().expect("initial guess gone?!");
+            let prev = self.last_guess();
             // 3. Play the guess to get a response of colored and white pegs.
-            let d = (self.codemaker)(&prev);
+            let response = (self.codemaker)(&prev);
 
             // If the response is four colored pegs, the game is won, the algorithm terminates.
-            if d.win() {
+            if response.win() {
                 None
             } else {
                 // 5. Otherwise, remove from S any code that would not
                 // give the same response if it (the guess) were the code.
-                self.remove_mismatches(d, prev);
+                self.retain_same_response(response);
 
                 // From the set of guesses with the maximum score, select one as
                 // the next guess ...
@@ -142,19 +164,11 @@ impl Solver {
     }
 
     // 5. Otherwise, remove from S any code that would not
-    // give the same response if it (the guess) were the code.
-    fn remove_mismatches(self: &mut Self, d: KeyPegs, guess: Pattern) {
-        // println!("remove_mismatches: before: {}", self.s.len());
+    //    give the same response if it (the guess) were the code.
+    pub fn retain_same_response(&mut self, response: KeyPegs) {
+        let the_guess = self.last_guess();
 
-        for p in Pattern::range() {
-            if self.s.contains(&p) {
-                let pd = guess.score(p);
-                if pd != d {
-                    // println!("removing {:?}: {:?} != {:?}", p, pd, d);
-                    self.s.remove(&p);
-                }
-            }
-        }
+        self.s.filter_with(&|p: &Pattern| the_guess.score(*p) == response)
     }
 
     /// - 6. Apply minimax technique to find a next guess as follows ...
@@ -266,6 +280,15 @@ impl PatternSet {
     pub fn contains(&self, p: &Pattern) -> bool {
         let ix = p.index() as usize;
         self.indexes.contains(&ix)
+    }
+
+    pub fn filter_with(&mut self, predicate: &Fn(&Pattern) -> bool) {
+        for p in Pattern::range() {
+            let ix = p.index() as usize;
+            if self.indexes.contains(&ix) && !predicate(&p) {
+                self.indexes.remove(&ix);
+            }
+        }
     }
 
     pub fn remove(&mut self, p: &Pattern) -> bool {
