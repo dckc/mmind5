@@ -244,7 +244,11 @@ impl Solver {
             work
         };
 
-        let (_, high_scoring_guesses) = Pattern::range().fold((0, vec![]), highest);
+        let unused = |p: &Pattern| !self.guessed.contains(p);
+        let (_, high_scoring_guesses) = Pattern::range()
+            .filter(unused)
+            .fold((0, vec![]), highest);
+
         // (Knuth follows the convention of choosing the guess
         // with the least numeric value)
         sorted(high_scoring_guesses)
