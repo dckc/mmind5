@@ -180,6 +180,7 @@ impl Pattern {
 
     /// Construct a Pattern from digits 1-6.
     /// Characters other than 1-6 are treated as '1'.
+    // TODO: trade in &str instead
     pub fn from_digits(digits: [char; 4]) -> Pattern {
         let base = CodePeg::colors() as u32;
         let digit = |pos: usize| digits[pos].to_digit(base).unwrap_or(1) - 1;
