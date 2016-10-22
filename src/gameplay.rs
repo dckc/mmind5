@@ -65,7 +65,6 @@
 
 // TODO: points, multiple games
 
-use std::hash::{Hash, Hasher};
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::iter;
@@ -83,7 +82,6 @@ impl Default for DecodingBoard {
 
 pub enum CodePeg {}
 impl CodePeg {
-    #[inline(always)]
     /// The game is played using code pegs of six different colors.
     pub fn colors() -> u8 {
         6
@@ -104,7 +102,7 @@ pub struct Pattern (u32);
 /// peg indicates the existence of a correct color code peg placed in
 /// the wrong position.
 #[derive(Debug)]
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Hash, Eq, Copy, Clone, Default)]
 pub struct KeyPegs {
     blacks: u8,
     whites: u8
@@ -141,16 +139,7 @@ impl Display for KeyPegs {
 }
 
 
-impl Hash for KeyPegs {
-    fn hash<H>(&self, state: &mut H) 
-        where H: Hasher {
-        (self.blacks, self.whites).hash(state)
-    }
-}
-
-
 impl Pattern {
-    #[inline(always)]
     /// The codemaker chooses a pattern of four code pegs.
     pub fn size() -> usize {
         4
@@ -168,7 +157,7 @@ impl Pattern {
     }
 
     pub fn index(&self) -> u32 {
-        return self.0
+        self.0
     }
 
     pub fn range() -> iter::Map<Range<u32>, fn(u32) -> Pattern > {
@@ -194,7 +183,7 @@ impl Pattern {
         for exp in 0..Pattern::size() {
             let remainder = (ith % CodePeg::colors() as u32) as u8;
             let digit = (('1' as u8) + remainder) as char;
-            ith = ith / CodePeg::colors() as u32;
+            ith /= CodePeg::colors() as u32;
             let pos = (Pattern::size() - 1 - exp) as usize;
             out[pos] = digit;
         }
@@ -221,11 +210,11 @@ impl Pattern {
         
         let mut s_used = g_used.clone();
         
-        for gpos in 0..Pattern::size() {
+        for (gpos, peg) in g.iter().enumerate().take(Pattern::size()) {
             if !g_used.contains(&gpos) {
                 // Find an unused "self" peg of the same color.
                 let scan = (0..Pattern::size()).find(
-                    |spos| s[*spos] == g[gpos] && !s_used.contains(spos));
+                    |spos| s[*spos] == *peg && !s_used.contains(spos));
                 
                 if let Some(spos) = scan {
                     s_used.push(spos);
