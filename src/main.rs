@@ -7,7 +7,7 @@ use rand::distributions::{IndependentSample, Range};
 pub mod gameplay;
 pub mod solver;
 
-use gameplay::{DecodingBoard, Pattern};
+use gameplay::{DecodingBoard, Pattern, shield};
 use solver::{Solver};
 
 
@@ -26,7 +26,7 @@ pub fn main() {
     };
     println!("codemaker: {}", secret);
 
-    let maker = Box::new(move |guess: &Pattern| secret.score(*guess));
+    let maker = shield(secret);
 
     let breaker = Solver::new(maker);
 

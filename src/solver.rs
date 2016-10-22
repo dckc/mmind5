@@ -43,11 +43,11 @@
 //! 7. Repeat from step 3.
 //!
 //! ```rust
-//! use self::mastermind::gameplay::{Pattern, KeyPegs};
+//! use self::mastermind::gameplay::{Pattern, KeyPegs, shield};
 //! use self::mastermind::solver::Solver;
 //!
 //! let code1 = Pattern::from_digits(['1', '1', '2', '2']);
-//! let codemaker_easy = Box::new(move |guess: &Pattern| code1.score(*guess));
+//! let codemaker_easy = shield(code1);
 //!
 //! let s = Solver::possible_codes();
 //! assert_eq!(s.len(), 1296);
@@ -71,10 +71,10 @@
 //! ```
 //!
 //! ```rust
-//! use self::mastermind::gameplay::{Pattern, KeyPegs};
+//! use self::mastermind::gameplay::{Pattern, KeyPegs, shield};
 //! use self::mastermind::solver::Solver;
 //! let code2 = Pattern::from_digits(['1', '1', '2', '3']);
-//! let codemaker_harder = Box::new(move |guess: &Pattern| code2.score(*guess));
+//! let codemaker_harder = shield(code2);
 //!
 //! let mut breaker2 = Solver::new(codemaker_harder);
 //! let guess1 = breaker2.play().expect("0 guesses!?");

@@ -53,12 +53,9 @@
 //! includes a second black.
 //!
 //! ```rust
-//! use self::mastermind::gameplay::{Pattern, KeyPegs};
+//! use self::mastermind::gameplay::{Pattern, KeyPegs, shield};
 //!
-//! let codemaker = {
-//!   let code = Pattern::from_digits(['1', '1', '2', '2']);
-//!   Box::new(move |guess: &Pattern| code.score(*guess))
-//! };
+//! let codemaker = shield(Pattern::from_digits(['1', '1', '2', '2']));
 //!
 //! let guess = Pattern::from_digits(['1', '1', '1', '2']);
 //! let feedback = codemaker(&guess);
@@ -215,8 +212,11 @@ impl Pattern {
         let s = self.to_digits();
         let g = guess.to_digits();
 
-        let right_place = |pos: &usize| s[*pos] == g[*pos];
-        let g_used: Vec<_> = (0..Pattern::size()).filter(right_place).collect();
+        let g_used: Vec<_> = s.iter()
+            .zip(g.iter())
+            .enumerate()
+            .filter(|ea| (ea.1).0 == (ea.1).1)
+            .map(|ea| ea.0).collect();
         let blacks = g_used.len();
         
         let mut s_used = g_used.clone();
@@ -231,7 +231,7 @@ impl Pattern {
                     s_used.push(spos);
                 }
             }
-                }
+        }
         let whites = s_used.len() - blacks;
 
         KeyPegs::new().blacks(blacks as u8).whites(whites as u8)
@@ -258,6 +258,10 @@ impl Display for Pattern {
 /// ... a shield at one end covering a row of four large holes ...
 pub type Shield = Box<Fn(&Pattern) -> KeyPegs>;
 
+/// Encapsulate a code in a function that provides feedback w.r.t. the code.
+pub fn shield(code: Pattern) -> Shield {
+    Box::new(move |guess: &Pattern| code.score(*guess))
+}
 
 
 #[cfg(test)]
