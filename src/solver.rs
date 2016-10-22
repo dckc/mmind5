@@ -94,8 +94,10 @@
 //! [Knuth's five guess algorithm][wp5]
 //! [wp5]: http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
 
-use std::collections::{BitSet, BitVec, HashMap};
+use std::collections::{HashMap};
 use std::cmp::Ordering::*;
+use bit_set::BitSet;
+use bit_vec::BitVec;
 
 use gameplay::{Pattern, KeyPegs, Shield};
 
@@ -282,14 +284,14 @@ impl PatternSet {
 
     pub fn contains(&self, p: &Pattern) -> bool {
         let ix = p.index() as usize;
-        self.indexes.contains(&ix)
+        self.indexes.contains(ix)
     }
 
     pub fn filter_with(&mut self, predicate: &Fn(&Pattern) -> bool) {
         for p in Pattern::range() {
             let ix = p.index() as usize;
-            if self.indexes.contains(&ix) && !predicate(&p) {
-                self.indexes.remove(&ix);
+            if self.indexes.contains(ix) && !predicate(&p) {
+                self.indexes.remove(ix);
             }
         }
     }

@@ -1,5 +1,5 @@
-#![feature(collections)]
-
+extern crate bit_set;
+extern crate bit_vec;
 extern crate rand;
 
 use rand::distributions::{IndependentSample, Range};
