@@ -71,7 +71,7 @@ use std::iter;
 use std::ops::Range;
 
 pub struct DecodingBoard {
-    pub rows: u8
+    pub rows: u8,
 }
 
 impl Default for DecodingBoard {
@@ -94,7 +94,7 @@ impl CodePeg {
 /// color.
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[derive(PartialOrd, Ord)]
-pub struct Pattern (u32);
+pub struct Pattern(u32);
 
 
 /// A colored or black key peg is placed for each code peg from
@@ -105,7 +105,7 @@ pub struct Pattern (u32);
 #[derive(PartialEq, Hash, Eq, Copy, Clone, Default)]
 pub struct KeyPegs {
     blacks: u8,
-    whites: u8
+    whites: u8,
 }
 
 impl KeyPegs {
@@ -115,23 +115,27 @@ impl KeyPegs {
     }
 
     pub fn new() -> KeyPegs {
-        KeyPegs { blacks: 0, whites: 0 }
+        KeyPegs {
+            blacks: 0,
+            whites: 0,
+        }
     }
 
     pub fn blacks(self, blacks: u8) -> KeyPegs {
         assert!(blacks as usize + self.whites as usize <= Pattern::size());
-        KeyPegs { blacks: blacks, .. self }
+        KeyPegs { blacks: blacks, ..self }
     }
 
     pub fn whites(self, whites: u8) -> KeyPegs {
         assert!(self.blacks as usize + whites as usize <= Pattern::size());
-        KeyPegs { whites: whites, .. self }
+        KeyPegs { whites: whites, ..self }
     }
 }
 
 impl Display for KeyPegs {
     fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
-        let s = iter::repeat('B').take(self.blacks as usize)
+        let s = iter::repeat('B')
+            .take(self.blacks as usize)
             .chain(iter::repeat('W').take(self.whites as usize))
             .collect::<String>();
         fmt.write_str(&s)
@@ -160,7 +164,7 @@ impl Pattern {
         self.0
     }
 
-    pub fn range() -> iter::Map<Range<u32>, fn(u32) -> Pattern > {
+    pub fn range() -> iter::Map<Range<u32>, fn(u32) -> Pattern> {
         (0..Pattern::cardinality()).map(Pattern::ith)
     }
 
@@ -205,17 +209,18 @@ impl Pattern {
             .zip(g.iter())
             .enumerate()
             .filter(|ea| (ea.1).0 == (ea.1).1)
-            .map(|ea| ea.0).collect();
+            .map(|ea| ea.0)
+            .collect();
         let blacks = g_used.len();
-        
+
         let mut s_used = g_used.clone();
-        
+
         for (gpos, peg) in g.iter().enumerate().take(Pattern::size()) {
             if !g_used.contains(&gpos) {
                 // Find an unused "self" peg of the same color.
-                let scan = (0..Pattern::size()).find(
-                    |spos| s[*spos] == *peg && !s_used.contains(spos));
-                
+                let scan = (0..Pattern::size())
+                    .find(|spos| s[*spos] == *peg && !s_used.contains(spos));
+
                 if let Some(spos) = scan {
                     s_used.push(spos);
                 }

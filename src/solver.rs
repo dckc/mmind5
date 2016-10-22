@@ -1,6 +1,7 @@
 //! Mastermind board game solver using Knuth's five guess algorithm
 //!
-//! With four pegs and six colors, there are 6^4 = 1296 different patterns (allowing duplicate colors).
+//! With four pegs and six colors, there are 6^4 = 1296 different patterns
+//! (allowing duplicate colors).
 //!
 //! ```rust
 //! use self::mastermind::gameplay::{CodePeg, Pattern};
@@ -94,7 +95,7 @@
 //! [Knuth's five guess algorithm][wp5]
 //! [wp5]: http://en.wikipedia.org/wiki/Mastermind_%28board_game%29#Five-guess_algorithm
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::cmp::Ordering::*;
 use bit_set::BitSet;
 use bit_vec::BitVec;
@@ -115,9 +116,11 @@ impl Solver {
     }
 
     pub fn new(codemaker: Shield) -> Solver {
-        Solver { codemaker: codemaker,
-                 s: Solver::possible_codes(),
-                 guessed: vec![] }
+        Solver {
+            codemaker: codemaker,
+            s: Solver::possible_codes(),
+            guessed: vec![],
+        }
     }
 
     /// Start with initial guess 1122
@@ -175,7 +178,7 @@ impl Solver {
     }
 
     /// - 6. Apply minimax technique to find a next guess as follows ...
-    ///      From the set of guesses with the maximum score, 
+    ///      From the set of guesses with the maximum score,
     ///      select one as
     ///      the next guess, choosing a member of S whenever
     ///      possible.
@@ -188,20 +191,19 @@ impl Solver {
             work
         };
         let next_guesses = sorted(self.max_score_guesses());
-                
+
         // ... choosing a member of S whenever possible.
         let next_in_s = next_guesses.iter().find(|g| self.s.contains(g));
 
         match next_in_s {
             Some(g) => *g,
-            None => next_guesses[0] // TODO: .expect()
+            None => next_guesses[0], // TODO: .expect()
         }
     }
 
 
     /// Apply minimax technique to find a next guess as follows ...
-    pub fn max_score_guesses(self: &Self) -> Vec<Pattern>
-    {
+    pub fn max_score_guesses(self: &Self) -> Vec<Pattern> {
 
         // The score of a guess is the minimum number of possibilities
         // it might eliminate from S.
@@ -224,7 +226,8 @@ impl Solver {
             // will eliminate the fewest possibilities; calculate the
             // score of a guess by using "minimum eliminated" = "count
             // of elements in S" - (minus) "highest hit count".
-            let highest_hit_count = hit_count.values().max()
+            let highest_hit_count = hit_count.values()
+                .max()
                 .expect("no max hit count: empty S? already won?");
             self.s.len() - highest_hit_count
         };
@@ -248,7 +251,7 @@ impl Solver {
                 match score.cmp(&high_score) {
                     Greater => (score, vec![guess]),
                     Equal => (score, append(candidates, guess)),
-                    _ => (high_score, candidates)
+                    _ => (high_score, candidates),
                 }
             });
 
@@ -267,7 +270,7 @@ impl Iterator for Solver {
 
 
 pub struct PatternSet {
-    indexes: BitSet
+    indexes: BitSet,
 }
 
 impl PatternSet {

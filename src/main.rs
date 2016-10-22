@@ -8,7 +8,7 @@ pub mod gameplay;
 pub mod solver;
 
 use gameplay::{DecodingBoard, Pattern, shield};
-use solver::{Solver};
+use solver::Solver;
 
 
 /// One player becomes the *codemaker*, the other the
@@ -16,7 +16,7 @@ use solver::{Solver};
 /// either the codebreaker guesses correctly, or ten incorrect guesses
 /// are made.
 pub fn main() {
-    use rand::{thread_rng};
+    use rand::thread_rng;
 
     let secret = {
         let rng = &mut thread_rng();
@@ -34,7 +34,6 @@ pub fn main() {
     let rows = DecodingBoard::default().rows as usize;
 
     for (turn, g) in breaker.take(rows).enumerate() {
-        println!("turn {}:    {}  {}",
-                 turn + 1, g, secret.score(g));
+        println!("turn {}:    {}  {}", turn + 1, g, secret.score(g));
     }
 }
